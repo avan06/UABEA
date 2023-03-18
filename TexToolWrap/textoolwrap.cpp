@@ -35,32 +35,32 @@ bool GetPVRTexLibModes(int mode, PVRTuint64& pvrtlMode, PVRTexLibVariableType& p
 		case 18: pvrtlMode = PVRTGENPIXELID4('r', 0 , 0 , 0 ,32, 0, 0, 0); break; //RFloat
 		case 19: pvrtlMode = PVRTGENPIXELID4('r','g', 0 , 0 ,32,32, 0, 0); break; //RGFloat
 		case 20: pvrtlMode = PVRTGENPIXELID4('r','g','b','a',32,32,32,32); break; //RGBAFloat
-		case 41: pvrtlMode = PVRTLPF_EAC_R11; break;
-		case 42: pvrtlMode = PVRTLPF_EAC_R11; break; //idk
+		case 41: pvrtlMode = PVRTLPF_EAC_R11;  break;
+		case 42: pvrtlMode = PVRTLPF_EAC_R11;  break; //idk
 		case 43: pvrtlMode = PVRTLPF_EAC_RG11; break;
 		case 44: pvrtlMode = PVRTLPF_EAC_RG11; break; //idk
-		case 34: pvrtlMode = PVRTLPF_ETC1; break;
+		case 34: pvrtlMode = PVRTLPF_ETC1;     break;
 		//case 60: break; //idk
 		//case 61: break; //idk
-		case 45: pvrtlMode = PVRTLPF_ETC2_RGB; break;
-		case 46: pvrtlMode = PVRTLPF_ETC2_RGB_A1; break;
-		case 47: pvrtlMode = PVRTLPF_ETC2_RGBA; break;
-		case 30: pvrtlMode = PVRTLPF_PVRTCI_2bpp_RGB; break;
+		case 45: pvrtlMode = PVRTLPF_ETC2_RGB;         break;
+		case 46: pvrtlMode = PVRTLPF_ETC2_RGB_A1;      break;
+		case 47: pvrtlMode = PVRTLPF_ETC2_RGBA;        break;
+		case 30: pvrtlMode = PVRTLPF_PVRTCI_2bpp_RGB;  break;
 		case 31: pvrtlMode = PVRTLPF_PVRTCI_2bpp_RGBA; break;
-		case 32: pvrtlMode = PVRTLPF_PVRTCI_4bpp_RGB; break;
+		case 32: pvrtlMode = PVRTLPF_PVRTCI_4bpp_RGB;  break;
 		case 33: pvrtlMode = PVRTLPF_PVRTCI_4bpp_RGBA; break;
-		case 48: pvrtlMode = PVRTLPF_ASTC_4x4; break;
-		case 49: pvrtlMode = PVRTLPF_ASTC_5x5; break;
-		case 50: pvrtlMode = PVRTLPF_ASTC_6x6; break;
-		case 51: pvrtlMode = PVRTLPF_ASTC_8x8; break;
-		case 52: pvrtlMode = PVRTLPF_ASTC_10x10; break;
-		case 53: pvrtlMode = PVRTLPF_ASTC_12x12; break;
-		case 54: pvrtlMode = PVRTLPF_ASTC_4x4; break; //idk
-		case 55: pvrtlMode = PVRTLPF_ASTC_5x5; break; //idk
-		case 56: pvrtlMode = PVRTLPF_ASTC_6x6; break; //idk
-		case 57: pvrtlMode = PVRTLPF_ASTC_8x8; break; //idk
-		case 58: pvrtlMode = PVRTLPF_ASTC_10x10; break; //idk
-		case 59: pvrtlMode = PVRTLPF_ASTC_12x12; break; //idk
+		case 48: pvrtlMode = PVRTLPF_ASTC_4x4;         break;
+		case 49: pvrtlMode = PVRTLPF_ASTC_5x5;         break;
+		case 50: pvrtlMode = PVRTLPF_ASTC_6x6;         break;
+		case 51: pvrtlMode = PVRTLPF_ASTC_8x8;         break;
+		case 52: pvrtlMode = PVRTLPF_ASTC_10x10;       break;
+		case 53: pvrtlMode = PVRTLPF_ASTC_12x12;       break;
+		case 54: pvrtlMode = PVRTLPF_ASTC_4x4;         break; //idk
+		case 55: pvrtlMode = PVRTLPF_ASTC_5x5;         break; //idk
+		case 56: pvrtlMode = PVRTLPF_ASTC_6x6;         break; //idk
+		case 57: pvrtlMode = PVRTLPF_ASTC_8x8;         break; //idk
+		case 58: pvrtlMode = PVRTLPF_ASTC_10x10;       break; //idk
+		case 59: pvrtlMode = PVRTLPF_ASTC_12x12;       break; //idk
 		default: return false; //idk
 	}
 	

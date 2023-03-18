@@ -226,7 +226,7 @@ namespace UABEAvalonia
                 if (field.Value != null)
                 {
                     AssetValueType evt = field.Value.ValueType;
-                    
+
                     if (field.Value.ValueType != AssetValueType.ManagedReferencesRegistry)
                     {
                         object value = evt switch
@@ -501,7 +501,7 @@ namespace UABEAvalonia
                             throw new Exception($"Missing field {childTempField.Name} in JSON.");
                         }
                     }
-                        
+
                     RecurseJsonImport(childTempField, childToken);
                 }
 
@@ -519,78 +519,78 @@ namespace UABEAvalonia
                 switch (tempField.ValueType)
                 {
                     case AssetValueType.Bool:
-                    {
-                        aw.Write((bool)token);
-                        break;
-                    }
-                    case AssetValueType.UInt8:
-                    {
-                        aw.Write((byte)token);
-                        break;
-                    }
-                    case AssetValueType.Int8:
-                    {
-                        aw.Write((sbyte)token);
-                        break;
-                    }
-                    case AssetValueType.UInt16:
-                    {
-                        aw.Write((ushort)token);
-                        break;
-                    }
-                    case AssetValueType.Int16:
-                    {
-                        aw.Write((short)token);
-                        break;
-                    }
-                    case AssetValueType.UInt32:
-                    {
-                        aw.Write((uint)token);
-                        break;
-                    }
-                    case AssetValueType.Int32:
-                    {
-                        aw.Write((int)token);
-                        break;
-                    }
-                    case AssetValueType.UInt64:
-                    {
-                        aw.Write((ulong)token);
-                        break;
-                    }
-                    case AssetValueType.Int64:
-                    {
-                        aw.Write((long)token);
-                        break;
-                    }
-                    case AssetValueType.Float:
-                    {
-                        aw.Write((float)token);
-                        break;
-                    }
-                    case AssetValueType.Double:
-                    {
-                        aw.Write((double)token);
-                        break;
-                    }
-                    case AssetValueType.String:
-                    {
-                        align = true;
-                        aw.WriteCountStringInt32((string?)token ?? "");
-                        break;
-                    }
-                    case AssetValueType.ByteArray:
-                    {
-                        JArray byteArrayJArray = ((JArray?)token) ?? new JArray();
-                        byte[] byteArrayData = new byte[byteArrayJArray.Count];
-                        for (int i = 0; i < byteArrayJArray.Count; i++)
                         {
-                            byteArrayData[i] = (byte)byteArrayJArray[i];
+                            aw.Write((bool)token);
+                            break;
                         }
-                        aw.Write(byteArrayData.Length);
-                        aw.Write(byteArrayData);
-                        break;
-                    }
+                    case AssetValueType.UInt8:
+                        {
+                            aw.Write((byte)token);
+                            break;
+                        }
+                    case AssetValueType.Int8:
+                        {
+                            aw.Write((sbyte)token);
+                            break;
+                        }
+                    case AssetValueType.UInt16:
+                        {
+                            aw.Write((ushort)token);
+                            break;
+                        }
+                    case AssetValueType.Int16:
+                        {
+                            aw.Write((short)token);
+                            break;
+                        }
+                    case AssetValueType.UInt32:
+                        {
+                            aw.Write((uint)token);
+                            break;
+                        }
+                    case AssetValueType.Int32:
+                        {
+                            aw.Write((int)token);
+                            break;
+                        }
+                    case AssetValueType.UInt64:
+                        {
+                            aw.Write((ulong)token);
+                            break;
+                        }
+                    case AssetValueType.Int64:
+                        {
+                            aw.Write((long)token);
+                            break;
+                        }
+                    case AssetValueType.Float:
+                        {
+                            aw.Write((float)token);
+                            break;
+                        }
+                    case AssetValueType.Double:
+                        {
+                            aw.Write((double)token);
+                            break;
+                        }
+                    case AssetValueType.String:
+                        {
+                            align = true;
+                            aw.WriteCountStringInt32((string?)token ?? "");
+                            break;
+                        }
+                    case AssetValueType.ByteArray:
+                        {
+                            JArray byteArrayJArray = ((JArray?)token) ?? new JArray();
+                            byte[] byteArrayData = new byte[byteArrayJArray.Count];
+                            for (int i = 0; i < byteArrayJArray.Count; i++)
+                            {
+                                byteArrayData[i] = (byte)byteArrayJArray[i];
+                            }
+                            aw.Write(byteArrayData.Length);
+                            aw.Write(byteArrayData);
+                            break;
+                        }
                 }
 
                 // have to do this because of bug in MonoDeserializer
@@ -698,7 +698,7 @@ namespace UABEAvalonia
                 .Replace("\r", "\\r")
                 .Replace("\n", "\\n");
         }
-        
+
         public static AssetsReplacer CreateAssetReplacer(AssetContainer cont, byte[] data)
         {
             return new AssetsReplacerFromMemory(cont.PathId, cont.ClassId, cont.MonoId, data);

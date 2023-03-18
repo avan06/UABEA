@@ -144,35 +144,35 @@ namespace TexturePlugin
         {
             switch (m_TextureFormat)
             {
-                case TextureFormat.Alpha8: return new Size(16, 1); // 1 byte per pixel
-                case TextureFormat.ARGB4444: return new Size(8, 1); // 2 bytes per pixel
-                case TextureFormat.RGBA32: return new Size(4, 1); // 4 bytes per pixel
-                case TextureFormat.ARGB32: return new Size(4, 1); // 4 bytes per pixel
-                case TextureFormat.ARGBFloat: return new Size(1, 1); // 16 bytes per pixel (?)
-                case TextureFormat.RGB565: return new Size(8, 1); // 2 bytes per pixel
-                case TextureFormat.R16: return new Size(8, 1); // 2 bytes per pixel
-                case TextureFormat.DXT1: return new Size(8, 4); // 8 bytes per 4x4=16 pixels
-                case TextureFormat.DXT5: return new Size(4, 4); // 16 bytes per 4x4=16 pixels
-                case TextureFormat.RGBA4444: return new Size(8, 1); // 2 bytes per pixel
-                case TextureFormat.BGRA32: return new Size(4, 1); // 4 bytes per pixel
-                case TextureFormat.BC6H: return new Size(4, 4); // 16 bytes per 4x4=16 pixels
-                case TextureFormat.BC7: return new Size(4, 4); // 16 bytes per 4x4=16 pixels
-                case TextureFormat.BC4: return new Size(8, 4); // 8 bytes per 4x4=16 pixels
-                case TextureFormat.BC5: return new Size(4, 4); // 16 bytes per 4x4=16 pixels
-                case TextureFormat.ASTC_RGB_4x4: return new Size(4, 4); // 16 bytes per 4x4=16 pixels
-                case TextureFormat.ASTC_RGB_5x5: return new Size(5, 5); // 16 bytes per 5x5=25 pixels
-                case TextureFormat.ASTC_RGB_6x6: return new Size(6, 6); // 16 bytes per 6x6=36 pixels
-                case TextureFormat.ASTC_RGB_8x8: return new Size(8, 8); // 16 bytes per 8x8=64 pixels
-                case TextureFormat.ASTC_RGB_10x10: return new Size(10, 10); // 16 bytes per 10x10=100 pixels
-                case TextureFormat.ASTC_RGB_12x12: return new Size(12, 12); // 16 bytes per 12x12=144 pixels
-                case TextureFormat.ASTC_RGBA_4x4: return new Size(4, 4); // 16 bytes per 4x4=16 pixels
-                case TextureFormat.ASTC_RGBA_5x5: return new Size(5, 5); // 16 bytes per 5x5=25 pixels
-                case TextureFormat.ASTC_RGBA_6x6: return new Size(6, 6); // 16 bytes per 6x6=36 pixels
-                case TextureFormat.ASTC_RGBA_8x8: return new Size(8, 8); // 16 bytes per 8x8=64 pixels
+                case TextureFormat.Alpha8:          return new Size(16, 1);  //  1 byte  per pixel
+                case TextureFormat.ARGB4444:        return new Size(8, 1);   //  2 bytes per pixel
+                case TextureFormat.RGBA32:          return new Size(4, 1);   //  4 bytes per pixel
+                case TextureFormat.ARGB32:          return new Size(4, 1);   //  4 bytes per pixel
+                case TextureFormat.ARGBFloat:       return new Size(1, 1);   // 16 bytes per pixel (?)
+                case TextureFormat.RGB565:          return new Size(8, 1);   //  2 bytes per pixel
+                case TextureFormat.R16:             return new Size(8, 1);   //  2 bytes per pixel
+                case TextureFormat.DXT1:            return new Size(8, 4);   //  8 bytes per 4x4=16 pixels
+                case TextureFormat.DXT5:            return new Size(4, 4);   // 16 bytes per 4x4=16 pixels
+                case TextureFormat.RGBA4444:        return new Size(8, 1);   //  2 bytes per pixel
+                case TextureFormat.BGRA32:          return new Size(4, 1);   //  4 bytes per pixel
+                case TextureFormat.BC6H:            return new Size(4, 4);   // 16 bytes per 4x4=16 pixels
+                case TextureFormat.BC7:             return new Size(4, 4);   // 16 bytes per 4x4=16 pixels
+                case TextureFormat.BC4:             return new Size(8, 4);   //  8 bytes per 4x4=16 pixels
+                case TextureFormat.BC5:             return new Size(4, 4);   // 16 bytes per 4x4=16 pixels
+                case TextureFormat.ASTC_RGB_4x4:    return new Size(4, 4);   // 16 bytes per 4x4=16 pixels
+                case TextureFormat.ASTC_RGB_5x5:    return new Size(5, 5);   // 16 bytes per 5x5=25 pixels
+                case TextureFormat.ASTC_RGB_6x6:    return new Size(6, 6);   // 16 bytes per 6x6=36 pixels
+                case TextureFormat.ASTC_RGB_8x8:    return new Size(8, 8);   // 16 bytes per 8x8=64 pixels
+                case TextureFormat.ASTC_RGB_10x10:  return new Size(10, 10); // 16 bytes per 10x10=100 pixels
+                case TextureFormat.ASTC_RGB_12x12:  return new Size(12, 12); // 16 bytes per 12x12=144 pixels
+                case TextureFormat.ASTC_RGBA_4x4:   return new Size(4, 4);   // 16 bytes per 4x4=16 pixels
+                case TextureFormat.ASTC_RGBA_5x5:   return new Size(5, 5);   // 16 bytes per 5x5=25 pixels
+                case TextureFormat.ASTC_RGBA_6x6:   return new Size(6, 6);   // 16 bytes per 6x6=36 pixels
+                case TextureFormat.ASTC_RGBA_8x8:   return new Size(8, 8);   // 16 bytes per 8x8=64 pixels
                 case TextureFormat.ASTC_RGBA_10x10: return new Size(10, 10); // 16 bytes per 10x10=100 pixels
                 case TextureFormat.ASTC_RGBA_12x12: return new Size(12, 12); // 16 bytes per 12x12=144 pixels
-                case TextureFormat.RG16: return new Size(8, 1); // 2 bytes per pixel
-                case TextureFormat.R8: return new Size(16, 1); // 1 byte per pixel
+                case TextureFormat.RG16:            return new Size(8, 1);   //  2 bytes per pixel
+                case TextureFormat.R8:              return new Size(16, 1);  //  1 byte  per pixel
                 default: throw new NotImplementedException();
             };
         }

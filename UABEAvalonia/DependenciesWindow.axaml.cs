@@ -23,12 +23,12 @@ namespace UABEAvalonia
         private Button btnMoveDown;
         private Button btnCancel;
         private Button btnOk;
-		
+
         private AssetWorkspace workspace;
 
         private Dictionary<AssetsFileInstance, List<AssetsFileExternal>> dependencyMap;
         private HashSet<AssetsFileInstance> dependenciesModified;
-        
+
         private bool askedAboutMoving;
 
         public DependenciesWindow()
@@ -75,7 +75,7 @@ namespace UABEAvalonia
             {
                 AssetsFileInstance file = workspace.LoadedFiles[i];
                 comboBoxFiles.Add(new DependencyComboBoxItem(file.name, file));
-                
+
                 List<AssetsFileExternal> dependencies = new List<AssetsFileExternal>();
                 for (int j = 0; j < file.file.Metadata.Externals.Count; j++)
                 {
@@ -359,7 +359,7 @@ namespace UABEAvalonia
         private async Task<bool> ShowMoveConfirmationDialog()
         {
             var result = await MessageBoxUtil.ShowDialog(this, "Warning",
-                "Are you sure you want to (re)move this dependency? This function will not automatically remap\n" + 
+                "Are you sure you want to (re)move this dependency? This function will not automatically remap\n" +
                 "the file ids in the assets in this file. Use only if you know what you're doing.", MessageBoxType.YesNo);
 
             return result == MessageBoxResult.Yes;

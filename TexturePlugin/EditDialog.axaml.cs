@@ -3,6 +3,7 @@ using AssetsTools.NET.Texture;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform.Storage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
@@ -10,6 +11,7 @@ using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Runtime.InteropServices;
 using UABEAvalonia;
 using Image = SixLabors.ImageSharp.Image;
@@ -96,22 +98,22 @@ namespace TexturePlugin
 
         private async void BtnLoad_Click(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Title = "Open texture";
-            ofd.Filters = new List<FileDialogFilter>() {
-                new FileDialogFilter() { Name = "Texture file", Extensions = new List<string>() { "png", "tga" } }
-            };
-
-            string[] fileList = await ofd.ShowAsync(this);
-            if (fileList == null || fileList.Length == 0)
-                return;
-
-            string file = fileList[0];
-
-            if (file != null && file != string.Empty)
+            var openDir = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                imagePath = file;
-            }
+                Title = "Open texture",
+                FileTypeFilter = new List<FilePickerFileType>()
+                {
+                    new FilePickerFileType("Texture file") { Patterns = new List<string>() { "*.png", "*.tga" } }
+                }
+            });
+
+            if (openDir == null || openDir.Count <= 0) return;
+
+            if (!openDir[0].TryGetUri(out Uri? uri) || uri == null) return;
+
+            string file = Path.GetFullPath(uri.OriginalString);
+
+            if (file != null && file != string.Empty) imagePath = file;
         }
 
         private async void BtnSave_Click(object sender, Avalonia.Interactivity.RoutedEventArgs e)

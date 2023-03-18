@@ -5,6 +5,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform.Storage;
+using Avalonia.Platform.Storage.FileIO;
 using MessageBox.Avalonia.Enums;
 using System;
 using System.Collections.Generic;
@@ -212,41 +214,55 @@ namespace UABEAvalonia
 
         private async void MenuOpen_Click(object? sender, RoutedEventArgs e)
         {
-            OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Title = "Open assets or bundle file";
-            ofd.Filters = new List<FileDialogFilter>() { new FileDialogFilter() { Name = "All files", Extensions = new List<string>() { "*" } } };
-            ofd.AllowMultiple = true;
-            string[]? files = await ofd.ShowAsync(this);
+            var openFiles = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Open assets or bundle file",
+                AllowMultiple = true,
+                FileTypeFilter = new List<FilePickerFileType>()
+                {
+                    new FilePickerFileType("All files") { Patterns = new List<string>() { "*.*" } }
+                }
+            });
 
-            if (files == null || files.Length == 0)
-                return;
+            if (openFiles == null || openFiles.Count <= 0) return;
+            if (!openFiles[0].TryGetUri(out Uri? uri) || uri == null) return;
+
+            string file = Path.GetFullPath(uri.OriginalString);
+            string[] files = new string[openFiles.Count];
+            files[0] = file;
+
+            for (int i = 1; i < openFiles.Count; i++)
+            {
+                var openFile = openFiles[i];
+                if (!openFile.TryGetUri(out uri) || uri == null) continue;
+                files[i] = Path.GetFullPath(uri.OriginalString);
+            }
 
             OpenFiles(files);
         }
 
         private async void MenuLoadPackageFile_Click(object? sender, RoutedEventArgs e)
         {
-            OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Filters = new List<FileDialogFilter>() {
-                new FileDialogFilter() { Name = "UABE Mod Installer Package", Extensions = new List<string>() { "emip" } }
-            };
-
-            string[]? fileList = await ofd.ShowAsync(this);
-
-            if (fileList == null || fileList.Length == 0)
-                return;
-
-            string emipPath = fileList[0];
-
-            if (emipPath != null && emipPath != string.Empty)
+            var openFiles = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                AssetsFileReader r = new AssetsFileReader(File.OpenRead(emipPath)); //todo close this
-                InstallerPackageFile emip = new InstallerPackageFile();
-                emip.Read(r);
+                Title = "Open package file",
+                FileTypeFilter = new List<FilePickerFileType>()
+                {
+                    new FilePickerFileType("UABE Mod Installer Package") { Patterns = new List<string>() { "*.emip" } }
+                }
+            });
 
-                LoadModPackageDialog dialog = new LoadModPackageDialog(emip, am);
-                await dialog.ShowDialog(this);
-            }
+            if (openFiles == null || openFiles.Count <= 0) return;
+            if (!openFiles[0].TryGetUri(out Uri? uri) || uri == null) return;
+
+            string emipPath = Path.GetFullPath(uri.OriginalString);
+
+            AssetsFileReader r = new AssetsFileReader(File.OpenRead(emipPath)); //todo close this
+            InstallerPackageFile emip = new InstallerPackageFile();
+            emip.Read(r);
+
+            LoadModPackageDialog dialog = new LoadModPackageDialog(emip, am);
+            await dialog.ShowDialog(this);
         }
 
         private void MenuAbout_Click(object? sender, RoutedEventArgs e)
@@ -280,15 +296,14 @@ namespace UABEAvalonia
             if (item == null)
                 return;
 
-            SaveFileDialog sfd = new SaveFileDialog();
-            sfd.Title = "Save as...";
-            sfd.InitialFileName = item.Name;
+            using var saveFile = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Save as...",
+                SuggestedFileName = item.Name,
+            });
+            if (saveFile == null) return;
 
-            string? file = await sfd.ShowAsync(this);
-            if (file == null)
-                return;
-
-            using FileStream fileStream = File.OpenWrite(file);
+            using FileStream fileStream = (FileStream)await saveFile.OpenWriteAsync();
 
             Stream stream = item.Stream;
             stream.Position = 0;
@@ -297,56 +312,51 @@ namespace UABEAvalonia
 
         private async void BtnImport_Click(object? sender, RoutedEventArgs e)
         {
-            if (BundleInst != null)
+            if (BundleInst == null) return;
+
+            var openFiles = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                OpenFileDialog ofd = new OpenFileDialog();
-                ofd.Title = "Open";
+                Title = "Open import file"
+            });
 
-                string[] files = await ofd.ShowAsync(this);
+            if (openFiles == null || openFiles.Count <= 0) return;
+            if (!openFiles[0].TryGetUri(out Uri? uri) || uri == null) return;
 
-                if (files == null || files.Length == 0)
-                    return;
+            string file = Path.GetFullPath(uri.OriginalString);
 
-                string file = files[0];
+            ImportSerializedDialog dialog = new ImportSerializedDialog();
+            bool isSerialized = await dialog.ShowDialog<bool>(this);
 
-                if (file == null)
-                    return;
+            byte[] fileBytes = File.ReadAllBytes(file);
+            string fileName = Path.GetFileName(file);
 
-                ImportSerializedDialog dialog = new ImportSerializedDialog();
-                bool isSerialized = await dialog.ShowDialog<bool>(this);
+            MemoryStream stream = new MemoryStream(fileBytes);
+            Workspace.AddOrReplaceFile(stream, fileName, isSerialized);
 
-                byte[] fileBytes = File.ReadAllBytes(file);
-                string fileName = Path.GetFileName(file);
-
-                MemoryStream stream = new MemoryStream(fileBytes);
-                Workspace.AddOrReplaceFile(stream, fileName, isSerialized);
-
-                SetBundleControlsEnabled(true, true);
-                changesUnsaved = true;
-                changesMade = true;
-            }
+            SetBundleControlsEnabled(true, true);
+            changesUnsaved = true;
+            changesMade = true;
         }
 
         private async void BtnRemove_Click(object? sender, RoutedEventArgs e)
         {
-            if (BundleInst != null && comboBox.SelectedItem != null)
-            {
-                BundleWorkspaceItem? item = (BundleWorkspaceItem?)comboBox.SelectedItem;
-                if (item == null)
-                    return;
+            if (BundleInst == null || comboBox.SelectedItem == null) return;
 
-                string origName = item.OriginalName;
-                string name = item.Name;
-                item.IsRemoved = true;
-                Workspace.RemovedFiles.Add(origName);
-                Workspace.Files.Remove(item);
-                Workspace.FileLookup.Remove(name);
+            BundleWorkspaceItem? item = (BundleWorkspaceItem?)comboBox.SelectedItem;
+            if (item == null)
+                return;
 
-                SetBundleControlsEnabled(true, Workspace.Files.Count > 0);
+            string origName = item.OriginalName;
+            string name = item.Name;
+            item.IsRemoved = true;
+            Workspace.RemovedFiles.Add(origName);
+            Workspace.Files.Remove(item);
+            Workspace.FileLookup.Remove(name);
 
-                changesUnsaved = true;
-                changesMade = true;
-            }
+            SetBundleControlsEnabled(true, Workspace.Files.Count > 0);
+
+            changesUnsaved = true;
+            changesMade = true;
         }
 
         private async void BtnInfo_Click(object? sender, RoutedEventArgs e)
@@ -406,13 +416,15 @@ namespace UABEAvalonia
             if (BundleInst == null)
                 return;
 
-            OpenFolderDialog ofd = new OpenFolderDialog();
-            ofd.Title = "Select export directory";
+            var openDir = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Select export directory"
+            });
 
-            string? dir = await ofd.ShowAsync(this);
+            if (openDir == null || openDir.Count <= 0) return;
+            if (!openDir[0].TryGetUri(out Uri? uri) || uri == null) return;
 
-            if (dir == null || dir == string.Empty)
-                return;
+            string dir = Path.GetFullPath(uri.OriginalString);
 
             for (int i = 0; i < BundleInst.file.BlockAndDirInfo.DirectoryInfos.Length; i++)
             {
@@ -522,32 +534,30 @@ namespace UABEAvalonia
 
             InfoWindow window = (InfoWindow)sender;
 
-            if (window.Workspace.fromBundle && window.ChangedAssetsDatas != null)
+            if (!window.Workspace.fromBundle || window.ChangedAssetsDatas == null) return;
+
+            List<Tuple<AssetsFileInstance, byte[]>> assetDatas = window.ChangedAssetsDatas;
+            foreach (var tup in assetDatas)
             {
-                List<Tuple<AssetsFileInstance, byte[]>> assetDatas = window.ChangedAssetsDatas;
+                AssetsFileInstance fileInstance = tup.Item1;
+                byte[] assetData = tup.Item2;
 
-                foreach (var tup in assetDatas)
-                {
-                    AssetsFileInstance fileInstance = tup.Item1;
-                    byte[] assetData = tup.Item2;
+                // remember selected index, when we replace the file it unselects the combobox item
+                int comboBoxSelectedIndex = comboBox.SelectedIndex;
 
-                    // remember selected index, when we replace the file it unselects the combobox item
-                    int comboBoxSelectedIndex = comboBox.SelectedIndex;
+                string assetName = Path.GetFileName(fileInstance.path);
+                Workspace.AddOrReplaceFile(new MemoryStream(assetData), assetName, true);
+                // unload it so the new version is reloaded when we reopen it
+                am.UnloadAssetsFile(fileInstance.path);
 
-                    string assetName = Path.GetFileName(fileInstance.path);
-                    Workspace.AddOrReplaceFile(new MemoryStream(assetData), assetName, true);
-                    // unload it so the new version is reloaded when we reopen it
-                    am.UnloadAssetsFile(fileInstance.path);
+                // reselect the combobox item
+                comboBox.SelectedIndex = comboBoxSelectedIndex;
+            }
 
-                    // reselect the combobox item
-                    comboBox.SelectedIndex = comboBoxSelectedIndex;
-                }
-
-                if (assetDatas.Count > 0)
-                {
-                    changesUnsaved = true;
-                    changesMade = true;
-                }
+            if (assetDatas.Count > 0)
+            {
+                changesUnsaved = true;
+                changesMade = true;
             }
         }
 
@@ -561,38 +571,38 @@ namespace UABEAvalonia
 
         private async Task AskForLocationAndSave()
         {
-            if (changesUnsaved && BundleInst != null)
+            if (!changesUnsaved || BundleInst == null) return;
+
+            using var saveFile = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                SaveFileDialog sfd = new SaveFileDialog();
-                sfd.Title = "Save as...";
+                Title = "Save as...",
+                SuggestedFileName = BundleInst.name + "-MOD",
+            });
+            if (saveFile == null) return;
+            if (!saveFile.TryGetUri(out Uri? uri)) return;
 
-                string? file = await sfd.ShowAsync(this);
+            string filePath = Path.GetFullPath(uri.OriginalString);
 
-                if (file == null)
-                    return;
-
-                if (Path.GetFullPath(file) == Path.GetFullPath(BundleInst.path))
-                {
-                    await MessageBoxUtil.ShowDialog(this,
-                        "File in use", "Since this file is already open in UABEA, you must pick a new file name (sorry!)");
-                    return;
-                }
-
-                SaveBundle(BundleInst, file);
+            if (filePath == Path.GetFullPath(BundleInst.path))
+            {
+                await MessageBoxUtil.ShowDialog(this,
+                    "File in use", "Since this file is already open in UABEA, you must pick a new file name (sorry!)");
+                return;
             }
+
+            SaveBundle(BundleInst, filePath);
         }
 
         private async Task AskForSave()
         {
-            if (changesUnsaved && BundleInst != null)
+            if (!changesUnsaved || BundleInst == null) return;
+
+            MessageBoxResult choice = await MessageBoxUtil.ShowDialog(this,
+                "Changes made", "You've modified this file. Would you like to save?",
+                MessageBoxType.YesNo);
+            if (choice == MessageBoxResult.Yes)
             {
-                MessageBoxResult choice = await MessageBoxUtil.ShowDialog(this,
-                    "Changes made", "You've modified this file. Would you like to save?",
-                    MessageBoxType.YesNo);
-                if (choice == MessageBoxResult.Yes)
-                {
-                    await AskForLocationAndSave();
-                }
+                await AskForLocationAndSave();
             }
         }
 
@@ -630,15 +640,17 @@ namespace UABEAvalonia
                     }
                 }
 
-                SaveFileDialog sfd = new SaveFileDialog();
-                sfd.Title = "Save as...";
+                using var saveFile = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+                {
+                    Title = "Save as...",
+                    SuggestedFileName = BundleInst.name.Replace("-decompressed", "") + "-compressed",
+                });
+                if (saveFile == null) return;
+                if (!saveFile.TryGetUri(out Uri? uri)) return;
 
-                string? file = await sfd.ShowAsync(this);
+                string filePath = Path.GetFullPath(uri.OriginalString);
 
-                if (file == null)
-                    return;
-
-                if (Path.GetFullPath(file) == Path.GetFullPath(BundleInst.path))
+                if (filePath == Path.GetFullPath(BundleInst.path))
                 {
                     await MessageBoxUtil.ShowDialog(this,
                         "File in use", "Since this file is already open in UABEA, you must pick a new file name (sorry!)");
@@ -667,7 +679,7 @@ namespace UABEAvalonia
                     object[] threadArgs =
                     {
                         BundleInst,
-                        file,
+                        filePath,
                         compType,
                         progressWindow.Progress
                     };
@@ -690,11 +702,19 @@ namespace UABEAvalonia
 
             if (splitRes == MessageBoxResult.Yes)
             {
-                SaveFileDialog sfd = new SaveFileDialog();
-                sfd.Title = "Select location for merged file";
-                sfd.Directory = Path.GetDirectoryName(selectedFile);
-                sfd.InitialFileName = Path.GetFileName(selectedFile.Substring(0, selectedFile.Length - ".split0".Length));
-                string splitFilePath = await sfd.ShowAsync(this);
+                FilePickerSaveOptions saveOptions = new FilePickerSaveOptions
+                {
+                    Title = "Select location for merged file",
+                    SuggestedFileName = Path.GetFileName(selectedFile.Substring(0, selectedFile.Length - ".split0".Length)),
+                };
+                string? dirName = Path.GetDirectoryName(selectedFile);
+                if (dirName != null) saveOptions.SuggestedStartLocation = new BclStorageFolder(new DirectoryInfo(dirName));
+                
+                using var saveFile = await StorageProvider.SaveFilePickerAsync(saveOptions);
+                if (saveFile == null) return null;
+                if (!saveFile.TryGetUri(out Uri? uri)) return null;
+
+                string splitFilePath = Path.GetFullPath(uri.OriginalString);
 
                 if (splitFilePath == null || splitFilePath == string.Empty)
                     return null;
@@ -740,28 +760,30 @@ namespace UABEAvalonia
 
             if (result == fileOption)
             {
-                SaveFileDialog sfd = new SaveFileDialog();
-                sfd.Title = "Save as...";
-                sfd.Filters = new List<FileDialogFilter>() { new FileDialogFilter() { Name = "All files", Extensions = new List<string>() { "*" } } };
+                FilePickerSaveOptions saveOptions = new FilePickerSaveOptions
+                {
+                    Title = "Save as...",
+                    SuggestedFileName = bundleInst.name.Replace("-compressed", "") + "-decompressed",
+                    FileTypeChoices = new List<FilePickerFileType>()
+                    {
+                        new FilePickerFileType("All files") { Patterns = new List<string>() { "*.*" } }
+                    },
+                };
 
                 string? savePath;
                 while (true)
                 {
-                    savePath = await sfd.ShowAsync(this);
+                    using IStorageFile? saveFile = await StorageProvider.SaveFilePickerAsync(saveOptions);
+                    if (saveFile == null) return;
+                    if (!saveFile.TryGetUri(out Uri? uri)) return;
 
-                    if (savePath == "" || savePath == null)
-                        return;
+                    savePath = Path.GetFullPath(uri.OriginalString);
 
-                    if (Path.GetFullPath(savePath) == Path.GetFullPath(bundleInst.path))
-                    {
-                        await MessageBoxUtil.ShowDialog(this,
-                            "File in use", "Since this file is already open in UABEA, you must pick a new file name (sorry!)");
-                        continue;
-                    }
-                    else
-                    {
-                        break;
-                    }
+                    if (savePath != Path.GetFullPath(bundleInst.path)) break;
+
+                    await MessageBoxUtil.ShowDialog(this,
+                        "File in use", "Since this file is already open in UABEA, you must pick a new file name (sorry!)");
+                    continue;
                 }
 
                 DecompressToFile(bundleInst, savePath);

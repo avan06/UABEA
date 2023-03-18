@@ -518,7 +518,7 @@ namespace UABEAvalonia
                             childTreeItem.Items = new AvaloniaList<TreeViewItem> { errorTreeItem };
                         }
                     }
-                    
+
                     if (hasChildren)
                     {
                         TreeViewItem dummyItem = CreateTreeItem("Loading...");

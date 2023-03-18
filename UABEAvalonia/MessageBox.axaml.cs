@@ -41,7 +41,7 @@ namespace UABEAvalonia
             this.type = type;
             titleLbl.Content = title;
             msgTextBox.Text = message;
-            
+
             if (type == MessageBoxType.OK)
             {
                 stackPanel.Children.Remove(btn2);

@@ -7,26 +7,20 @@
         Icon="/Assets/uabeavalonia16.ico"
         x:Class="UABEAvalonia.ImportBatch"
         Title="Batch import">
-  <Grid Margin="10,10,10,10">
-    <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="0.6*"></ColumnDefinition>
-      <ColumnDefinition Width="5"></ColumnDefinition>
-      <ColumnDefinition Width="0.4*"></ColumnDefinition>
-    </Grid.ColumnDefinitions>
-    <Border Margin="0,0,0,30" BorderBrush="Black" BorderThickness="1" Grid.Column="0">
-      <DataGrid AutoGenerateColumns="True" CanUserResizeColumns="True" IsReadOnly="True" Name="dataGrid" />
-    </Border>
-    <GridSplitter Grid.Column="1" />
-    <Grid Grid.Column="2">
-      <ListBox Margin="0,0,0,30" Name="boxMatchingFiles" />
-      <Grid Margin="0,0,0,0" VerticalAlignment="Bottom">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="*"></ColumnDefinition>
-          <ColumnDefinition Width="*"></ColumnDefinition>
-        </Grid.ColumnDefinitions>
-        <Button Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Name="btnOk">Ok</Button>
-        <Button Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Name="btnCancel">Cancel</Button>
+  <Grid RowDefinitions="30, *">
+      <TextBox Margin="0,0,0,0" Grid.Row="0" Name="matchByTextBox" Watermark='Custom matching syntax, default is "-{File}-{PathID}", {Description}: assetName, {File}: assetFile, {PathID}: pathId' ScrollViewer.VerticalScrollBarVisibility="Disabled" />
+      <Grid Margin="5,5,5,5" ColumnDefinitions="0.6*, 5, 0.4*" Grid.Row="1">
+          <Border Margin="0,0,0,30" BorderBrush="Black" BorderThickness="1" Grid.Column="0">
+              <DataGrid AutoGenerateColumns="True" CanUserResizeColumns="True" IsReadOnly="True" Name="dataGrid" />
+          </Border>
+          <GridSplitter Grid.Column="1" />
+          <Grid Grid.Column="2">
+              <ListBox Margin="0,0,0,30" Name="boxMatchingFiles" />
+              <Grid Margin="0,0,0,0" VerticalAlignment="Bottom" ColumnDefinitions="*, *">
+                  <Button Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Name="btnOk">Ok</Button>
+                  <Button Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Name="btnCancel">Cancel</Button>
+              </Grid>
+          </Grid>
       </Grid>
-    </Grid>
   </Grid>
 </Window>

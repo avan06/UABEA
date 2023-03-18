@@ -2,6 +2,7 @@ using AssetsTools.NET;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform.Storage;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System;
@@ -191,75 +192,78 @@ namespace UABEAvalonia
 
         private async void BtnBaseFolder_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            OpenFolderDialog ofd = new OpenFolderDialog();
-            ofd.Title = "Select base folder";
-
-            string dir = await ofd.ShowAsync(this);
-
-            if (dir != null && dir != string.Empty)
+            var openDir = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                boxBaseFolder.Text = dir;
-            }
+                Title = "Select base folder"
+            });
+
+            if (openDir == null || openDir.Count <= 0) return;
+            if (!openDir[0].TryGetUri(out Uri? uri) || uri == null) return;
+
+            string dir = Path.GetFullPath(uri.OriginalString);
+
+            boxBaseFolder.Text = dir;
         }
 
         private async void BtnImport_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Filters = new List<FileDialogFilter>() {
-                new FileDialogFilter() { Name = "UABE Mod Installer Package", Extensions = new List<string>() { "emip" } }
-            };
-
-            string[] fileList = await ofd.ShowAsync(this);
-
-            if (fileList == null || fileList.Length == 0)
-                return;
-
-            string emipPath = fileList[0];
-
-            if (emipPath != null && emipPath != string.Empty)
+            var openFiles = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                OpenFolderDialog ofdBase = new OpenFolderDialog();
-                ofdBase.Title = "Select base folder";
-
-                string rootPath = await ofdBase.ShowAsync(this);
-
-                if (rootPath != null && rootPath != string.Empty)
+                Title = "Open package file",
+                FileTypeFilter = new List<FilePickerFileType>()
                 {
-                    InstallerPackageFile impEmip = new InstallerPackageFile();
+                    new FilePickerFileType("UABE Mod Installer Package") { Patterns = new List<string>() { "*.emip" } }
+                }
+            });
 
-                    if (importedEmipStream != null && importedEmipStream.CanRead)
-                        importedEmipStream.Close();
+            if (openFiles == null || openFiles.Count <= 0) return;
+            if (!openFiles[0].TryGetUri(out Uri? uri) || uri == null) return;
 
-                    importedEmipStream = File.OpenRead(emipPath);
-                    AssetsFileReader r = new AssetsFileReader(importedEmipStream);
-                    impEmip.Read(r);
+            string emipPath = Path.GetFullPath(uri.OriginalString);
 
-                    boxModName.Text = impEmip.modName;
-                    boxCredits.Text = impEmip.modCreators;
-                    boxDesc.Text = impEmip.modDescription;
+            var openDir = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Select base folder"
+            });
 
-                    foreach (InstallerPackageAssetsDesc affectedFile in impEmip.affectedFiles)
+            if (openDir == null || openDir.Count <= 0) return;
+            if (!openDir[0].TryGetUri(out uri) || uri == null) return;
+
+            string rootPath = Path.GetFullPath(uri.OriginalString);
+
+            InstallerPackageFile impEmip = new InstallerPackageFile();
+
+            if (importedEmipStream != null && importedEmipStream.CanRead)
+                importedEmipStream.Close();
+
+            importedEmipStream = File.OpenRead(emipPath);
+            AssetsFileReader r = new AssetsFileReader(importedEmipStream);
+            impEmip.Read(r);
+
+            boxModName.Text = impEmip.modName;
+            boxCredits.Text = impEmip.modCreators;
+            boxDesc.Text = impEmip.modDescription;
+
+            foreach (InstallerPackageAssetsDesc affectedFile in impEmip.affectedFiles)
+            {
+                if (!affectedFile.isBundle)
+                {
+                    string file = Path.GetFullPath(affectedFile.path, rootPath);
+                    if (!fileToTvi.ContainsKey(file))
                     {
-                        if (!affectedFile.isBundle)
-                        {
-                            string file = Path.GetFullPath(affectedFile.path, rootPath);
-                            if (!fileToTvi.ContainsKey(file))
-                            {
-                                ModMakerTreeFileInfo newFileItem = new ModMakerTreeFileInfo(file, rootPath);
-                                filesItems.Add(newFileItem);
-                                fileToTvi.Add(file, newFileItem);
-                            }
+                        ModMakerTreeFileInfo newFileItem = new ModMakerTreeFileInfo(file, rootPath);
+                        filesItems.Add(newFileItem);
+                        fileToTvi.Add(file, newFileItem);
+                    }
 
-                            ModMakerTreeFileInfo fileItem = fileToTvi[file];
+                    ModMakerTreeFileInfo fileItem = fileToTvi[file];
 
-                            foreach (AssetsReplacer replacer in affectedFile.replacers)
-                            {
-                                AssetID assetId = new AssetID(file, replacer.GetPathID());
+                    foreach (AssetsReplacer replacer in affectedFile.replacers)
+                    {
+                        AssetID assetId = new AssetID(file, replacer.GetPathID());
 
-                                var obsItems = fileItem.Replacers;
-                                obsItems.Add(new ModMakerTreeReplacerInfo(assetId, replacer));
-                            }
-                        }
+                        var obsItems = fileItem.Replacers;
+                        obsItems.Add(new ModMakerTreeReplacerInfo(assetId, replacer));
                     }
                 }
             }
@@ -267,11 +271,18 @@ namespace UABEAvalonia
 
         private async void BtnOk_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            SaveFileDialog sfd = new SaveFileDialog();
-            sfd.Filters = new List<FileDialogFilter>() {
-                new FileDialogFilter() { Name = "UABE Mod Installer Package", Extensions = new List<string>() { "emip" } }
-            };
-            string path = await sfd.ShowAsync(this);
+            using var saveFile = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                DefaultExtension = "emip",
+                FileTypeChoices = new List<FilePickerFileType>()
+                {
+                    new FilePickerFileType("UABE Mod Installer Package") { Patterns = new List<string>() { "*.emip" } }
+                },
+            });
+            if (saveFile == null) return;
+            if (!saveFile.TryGetUri(out Uri? uri)) return;
+
+            string path = Path.GetFullPath(uri.OriginalString);
 
             if (path != null && path != string.Empty)
             {

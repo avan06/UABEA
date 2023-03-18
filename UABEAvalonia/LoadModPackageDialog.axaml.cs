@@ -3,6 +3,7 @@ using AssetsTools.NET.Extra;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform.Storage;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -62,15 +63,17 @@ namespace UABEAvalonia
 
         private async void BtnBaseFolder_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            OpenFolderDialog ofd = new OpenFolderDialog();
-            ofd.Title = "Select base folder";
-
-            string dir = await ofd.ShowAsync(this);
-
-            if (dir != null && dir != string.Empty)
+            var openDir = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                boxBaseFolder.Text = dir;
-            }
+                Title = "Select base folder"
+            });
+
+            if (openDir == null || openDir.Count <= 0) return;
+            if (!openDir[0].TryGetUri(out Uri? uri) || uri == null) return;
+
+            string dir = Path.GetFullPath(uri.OriginalString);
+
+            boxBaseFolder.Text = dir;
         }
 
         private async void BtnOk_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

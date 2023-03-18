@@ -14,13 +14,19 @@ namespace UABEAvalonia
     public partial class ImportBatch : Window
     {
         //controls
+        private TextBox matchByTextBox;
         private DataGrid dataGrid;
         private ListBox boxMatchingFiles;
         private Button btnOk;
         private Button btnCancel;
 
         private AssetWorkspace workspace;
+        private List<AssetContainer> selection;
+        private List<string> extensions;
+        private List<string> filesInDir;
+        private string? matchBy;
         private string directory;
+        private bool anyExtension;
         private bool ignoreListEvents;
 
         public ImportBatch()
@@ -30,11 +36,13 @@ namespace UABEAvalonia
             this.AttachDevTools();
 #endif
             //generated items
+            matchByTextBox   = this.FindControl<TextBox>("matchByTextBox");
             dataGrid = this.FindControl<DataGrid>("dataGrid");
             boxMatchingFiles = this.FindControl<ListBox>("boxMatchingFiles");
             btnOk = this.FindControl<Button>("btnOk");
             btnCancel = this.FindControl<Button>("btnCancel");
             //generated events
+            matchByTextBox.TextChanged += MatchByTextBox_TextChanged;
             dataGrid.SelectionChanged += DataGrid_SelectionChanged;
             boxMatchingFiles.SelectionChanged += BoxMatchingFiles_SelectionChanged;
             btnOk.Click += BtnOk_Click;
@@ -45,17 +53,26 @@ namespace UABEAvalonia
 
         public ImportBatch(AssetWorkspace workspace, List<AssetContainer> selection, string directory, List<string> extensions) : this()
         {
-            this.workspace = workspace;
-            this.directory = directory;
+            this.workspace    = workspace;
+            this.directory    = directory;
+            this.selection    = selection;
+            this.extensions   = extensions;
+            this.anyExtension = extensions.Contains("*");
+            this.filesInDir   = anyExtension ? Directory.GetFiles(directory).ToList() : Extensions.GetFilesInDirectory(directory, extensions);
+            
+            MakeDataGridItems();
+        }
 
-            bool anyExtension = extensions.Contains("*");
+        private void MatchByTextBox_TextChanged(object? sender, TextChangedEventArgs e)
+        {
+            if (matchBy == matchByTextBox.Text) return;
+            matchBy = matchByTextBox.Text;
 
-            List<string> filesInDir;
-            if (!anyExtension)
-                filesInDir = Extensions.GetFilesInDirectory(directory, extensions);
-            else
-                filesInDir = Directory.GetFiles(directory).ToList();
+            MakeDataGridItems();
+        }
 
+        private void MakeDataGridItems()
+        {
             List<ImportBatchDataGridItem> gridItems = new List<ImportBatchDataGridItem>();
             foreach (AssetContainer cont in selection)
             {
@@ -73,14 +90,14 @@ namespace UABEAvalonia
                 };
 
                 List<string> matchingFiles;
-                
+
                 if (!anyExtension)
                     matchingFiles = filesInDir
-                        .Where(f => extensions.Any(x => f.EndsWith(gridItem.GetMatchName(x))))
+                        .Where(f => extensions.Any(x => f.EndsWith(gridItem.GetMatchName(x, matchBy))))
                         .Select(f => Path.GetFileName(f)).ToList();
                 else
                     matchingFiles = filesInDir
-                        .Where(f => Extensions.GetFilePathWithoutExtension(f).EndsWith(gridItem.GetMatchName("*")))
+                        .Where(f => Extensions.GetFilePathWithoutExtension(f).EndsWith(gridItem.GetMatchName("*", matchBy)))
                         .Select(f => Path.GetFileName(f)).ToList();
 
                 gridItem.matchingFiles = matchingFiles;
@@ -166,13 +183,16 @@ namespace UABEAvalonia
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public string GetMatchName(string ext)
+        public string GetMatchName(string ext, string? matchBy)
         {
-            if (ext != "*")
-                return $"-{File}-{PathID}.{ext}";
+            if (matchBy == null || matchBy.Length == 0)
+                matchBy = $"-{File}-{PathID}";
             else
-                return $"-{File}-{PathID}";
+                matchBy = matchBy.Replace("{Description}", $"{Description}").Replace("{File}", $"{File}").Replace("{PathID}", $"{PathID}");
+
+            return ext != "*" ? $"{matchBy}.{ext}" : $"{matchBy}";
         }
+
         public void Update(string propertyName = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

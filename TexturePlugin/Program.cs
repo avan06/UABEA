@@ -2,6 +2,7 @@
 using AssetsTools.NET.Extra;
 using AssetsTools.NET.Texture;
 using Avalonia.Controls;
+using Avalonia.Platform.Storage;
 using MessageBox.Avalonia.Enums;
 using System;
 using System.Collections.Generic;
@@ -159,45 +160,44 @@ namespace TexturePlugin
                 selection[i] = new AssetContainer(selection[i], TextureHelper.GetByteArrayTexture(workspace, selection[i]));
             }
 
-            OpenFolderDialog ofd = new OpenFolderDialog();
-            ofd.Title = "Select import directory";
-
-            string dir = await ofd.ShowAsync(win);
-
-            if (dir != null && dir != string.Empty)
+            var openDir = await win.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                List<string> extensions = new List<string>() { "png", "tga" };
-                
-                ImportBatch dialog = new ImportBatch(workspace, selection, dir, extensions);
-                List<ImportBatchInfo> batchInfos = await dialog.ShowDialog<List<ImportBatchInfo>>(win);
-                if (batchInfos == null)
-                {
-                    return false;
-                }
+                Title = "Select import directory"
+            });
 
-                bool success = await ImportTextures(win, batchInfos);
-                if (success)
-                {
-                    foreach (AssetContainer cont in selection)
-                    {
-                        if (batchInfos.Where(x => x.pathId == cont.PathId).Count() == 0)
-                        {
-                            continue;
-                        }
-                        byte[] savedAsset = cont.BaseValueField.WriteToByteArray();
+            if (openDir == null || openDir.Count <= 0) return false;
+            if (!openDir[0].TryGetUri(out Uri? uri) || uri == null) return false;
 
-                        var replacer = new AssetsReplacerFromMemory(
-                            cont.PathId, cont.ClassId, cont.MonoId, savedAsset);
+            string dir = Path.GetFullPath(uri.OriginalString);
 
-                        workspace.AddReplacer(cont.FileInstance, replacer, new MemoryStream(savedAsset));
-                    }
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
+            List<string> extensions = new List<string>() { "png", "tga" };
+
+            ImportBatch dialog = new ImportBatch(workspace, selection, dir, extensions);
+            List<ImportBatchInfo> batchInfos = await dialog.ShowDialog<List<ImportBatchInfo>>(win);
+            if (batchInfos == null)
+            {
+                return false;
             }
+
+            bool success = await ImportTextures(win, batchInfos);
+            if (success)
+            {
+                foreach (AssetContainer cont in selection)
+                {
+                    if (batchInfos.Where(x => x.pathId == cont.PathId).Count() == 0)
+                    {
+                        continue;
+                    }
+                    byte[] savedAsset = cont.BaseValueField.WriteToByteArray();
+
+                    var replacer = new AssetsReplacerFromMemory(
+                        cont.PathId, cont.ClassId, cont.MonoId, savedAsset);
+
+                    workspace.AddReplacer(cont.FileInstance, replacer, new MemoryStream(savedAsset));
+                }
+                return true;
+            }
+
             return false;
         }
     }
@@ -281,68 +281,69 @@ namespace TexturePlugin
 
             if (fileType != null && fileType != string.Empty)
             {
-                OpenFolderDialog ofd = new OpenFolderDialog();
-                ofd.Title = "Select export directory";
-
-                string dir = await ofd.ShowAsync(win);
-
-                if (dir != null && dir != string.Empty)
+                var openDir = await win.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
                 {
-                    StringBuilder errorBuilder = new StringBuilder();
+                    Title = "Select export directory"
+                });
 
-                    foreach (AssetContainer cont in selection)
+                if (openDir == null || openDir.Count <= 0) return false;
+                if (!openDir[0].TryGetUri(out Uri? uri) || uri == null) return false;
+
+                string dir = Path.GetFullPath(uri.OriginalString);
+
+                StringBuilder errorBuilder = new StringBuilder();
+
+                foreach (AssetContainer cont in selection)
+                {
+                    string errorAssetName = $"{Path.GetFileName(cont.FileInstance.path)}/{cont.PathId}";
+
+                    AssetTypeValueField texBaseField = cont.BaseValueField;
+                    TextureFile texFile = TextureFile.ReadTextureFile(texBaseField);
+
+                    //0x0 texture, usually called like Font Texture or smth
+                    if (texFile.m_Width == 0 && texFile.m_Height == 0)
+                        continue;
+
+                    string assetName = Extensions.ReplaceInvalidPathChars(texFile.m_Name);
+                    string file = Path.Combine(dir, $"{assetName}-{Path.GetFileName(cont.FileInstance.path)}-{cont.PathId}.{fileType.ToLower()}");
+
+                    //bundle resS
+                    if (!GetResSTexture(texFile, cont))
                     {
-                        string errorAssetName = $"{Path.GetFileName(cont.FileInstance.path)}/{cont.PathId}";
-
-                        AssetTypeValueField texBaseField = cont.BaseValueField;
-                        TextureFile texFile = TextureFile.ReadTextureFile(texBaseField);
-
-                        //0x0 texture, usually called like Font Texture or smth
-                        if (texFile.m_Width == 0 && texFile.m_Height == 0)
-                            continue;
-
-                        string assetName = Extensions.ReplaceInvalidPathChars(texFile.m_Name);
-                        string file = Path.Combine(dir, $"{assetName}-{Path.GetFileName(cont.FileInstance.path)}-{cont.PathId}.{fileType.ToLower()}");
-
-                        //bundle resS
-                        if (!GetResSTexture(texFile, cont))
-                        {
-                            string resSName = Path.GetFileName(texFile.m_StreamData.path);
-                            errorBuilder.AppendLine($"[{errorAssetName}]: resS was detected but {resSName} was not found in bundle");
-                            continue;
-                        }
-
-                        byte[] data = TextureHelper.GetRawTextureBytes(texFile, cont.FileInstance);
-
-                        if (data == null)
-                        {
-                            string resSName = Path.GetFileName(texFile.m_StreamData.path);
-                            errorBuilder.AppendLine($"[{errorAssetName}]: resS was detected but {resSName} was not found on disk");
-                            continue;
-                        }
-
-                        byte[] platformBlob = TextureHelper.GetPlatformBlob(texBaseField);
-                        uint platform = cont.FileInstance.file.Metadata.TargetPlatform;
-
-                        bool success = TextureImportExport.Export(data, file, texFile.m_Width, texFile.m_Height, (TextureFormat)texFile.m_TextureFormat, platform, platformBlob);
-                        if (!success)
-                        {
-                            string texFormat = ((TextureFormat)texFile.m_TextureFormat).ToString();
-                            errorBuilder.AppendLine($"[{errorAssetName}]: Failed to decode texture format {texFormat}");
-                            continue;
-                        }
+                        string resSName = Path.GetFileName(texFile.m_StreamData.path);
+                        errorBuilder.AppendLine($"[{errorAssetName}]: resS was detected but {resSName} was not found in bundle");
+                        continue;
                     }
 
-                    if (errorBuilder.Length > 0)
+                    byte[] data = TextureHelper.GetRawTextureBytes(texFile, cont.FileInstance);
+
+                    if (data == null)
                     {
-                        string[] firstLines = errorBuilder.ToString().Split('\n').Take(20).ToArray();
-                        string firstLinesStr = string.Join('\n', firstLines);
-                        await MessageBoxUtil.ShowDialog(win, "Some errors occurred while exporting", firstLinesStr);
+                        string resSName = Path.GetFileName(texFile.m_StreamData.path);
+                        errorBuilder.AppendLine($"[{errorAssetName}]: resS was detected but {resSName} was not found on disk");
+                        continue;
                     }
 
-                    return true;
+                    byte[] platformBlob = TextureHelper.GetPlatformBlob(texBaseField);
+                    uint platform = cont.FileInstance.file.Metadata.TargetPlatform;
+
+                    bool success = TextureImportExport.Export(data, file, texFile.m_Width, texFile.m_Height, (TextureFormat)texFile.m_TextureFormat, platform, platformBlob);
+                    if (!success)
+                    {
+                        string texFormat = ((TextureFormat)texFile.m_TextureFormat).ToString();
+                        errorBuilder.AppendLine($"[{errorAssetName}]: Failed to decode texture format {texFormat}");
+                        continue;
+                    }
                 }
-                return false;
+
+                if (errorBuilder.Length > 0)
+                {
+                    string[] firstLines = errorBuilder.ToString().Split('\n').Take(20).ToArray();
+                    string firstLinesStr = string.Join('\n', firstLines);
+                    await MessageBoxUtil.ShowDialog(win, "Some errors occurred while exporting", firstLinesStr);
+                }
+
+                return true;
             }
             return false;
         }
@@ -362,49 +363,51 @@ namespace TexturePlugin
 
             string assetName = Extensions.ReplaceInvalidPathChars(texFile.m_Name);
 
-            SaveFileDialog sfd = new SaveFileDialog();
-            sfd.Title = "Save texture";
-            sfd.Filters = new List<FileDialogFilter>() {
-                new FileDialogFilter() { Name = "PNG file", Extensions = new List<string>() { "png" } },
-                new FileDialogFilter() { Name = "TGA file", Extensions = new List<string>() { "tga" } }
-            };
-            sfd.InitialFileName = $"{assetName}-{Path.GetFileName(cont.FileInstance.path)}-{cont.PathId}.png";
-
-            string file = await sfd.ShowAsync(win);
-
-            if (file != null && file != string.Empty)
+            using var saveFile = await win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                string errorAssetName = $"{Path.GetFileName(cont.FileInstance.path)}/{cont.PathId}";
-
-                //bundle resS
-                if (!GetResSTexture(texFile, cont))
+                Title = "Save texture",
+                SuggestedFileName = $"{assetName}-{Path.GetFileName(cont.FileInstance.path)}-{cont.PathId}",
+                DefaultExtension = "png",
+                FileTypeChoices = new List<FilePickerFileType>()
                 {
-                    string resSName = Path.GetFileName(texFile.m_StreamData.path);
-                    await MessageBoxUtil.ShowDialog(win, "Error", $"[{errorAssetName}]: resS was detected but {resSName} was not found in bundle");
-                    return false;
-                }
+                    new FilePickerFileType("PNG file") { Patterns = new List<string>() { "*.png" } },
+                    new FilePickerFileType("TGA file") { Patterns = new List<string>() { "*.tga" } }
+                },
+            });
+            if (saveFile == null) return false;
+            if (!saveFile.TryGetUri(out Uri? uri)) return false;
 
-                byte[] data = TextureHelper.GetRawTextureBytes(texFile, cont.FileInstance);
+            string file = Path.GetFullPath(uri.OriginalString);
 
-                if (data == null)
-                {
-                    string resSName = Path.GetFileName(texFile.m_StreamData.path);
-                    await MessageBoxUtil.ShowDialog(win, "Error", $"[{errorAssetName}]: resS was detected but {resSName} was not found on disk");
-                    return false;
-                }
+            string errorAssetName = $"{Path.GetFileName(cont.FileInstance.path)}/{cont.PathId}";
 
-                byte[] platformBlob = TextureHelper.GetPlatformBlob(texBaseField);
-                uint platform = cont.FileInstance.file.Metadata.TargetPlatform;
-
-                bool success = TextureImportExport.Export(data, file, texFile.m_Width, texFile.m_Height, (TextureFormat)texFile.m_TextureFormat, platform, platformBlob);
-                if (!success)
-                {
-                    string texFormat = ((TextureFormat)texFile.m_TextureFormat).ToString();
-                    await MessageBoxUtil.ShowDialog(win, "Error", $"[{errorAssetName}]: Failed to decode texture format {texFormat}");
-                }
-                return success;
+            //bundle resS
+            if (!GetResSTexture(texFile, cont))
+            {
+                string resSName = Path.GetFileName(texFile.m_StreamData.path);
+                await MessageBoxUtil.ShowDialog(win, "Error", $"[{errorAssetName}]: resS was detected but {resSName} was not found in bundle");
+                return false;
             }
-            return false;
+
+            byte[] data = TextureHelper.GetRawTextureBytes(texFile, cont.FileInstance);
+
+            if (data == null)
+            {
+                string resSName = Path.GetFileName(texFile.m_StreamData.path);
+                await MessageBoxUtil.ShowDialog(win, "Error", $"[{errorAssetName}]: resS was detected but {resSName} was not found on disk");
+                return false;
+            }
+
+            byte[] platformBlob = TextureHelper.GetPlatformBlob(texBaseField);
+            uint platform = cont.FileInstance.file.Metadata.TargetPlatform;
+
+            bool success = TextureImportExport.Export(data, file, texFile.m_Width, texFile.m_Height, (TextureFormat)texFile.m_TextureFormat, platform, platformBlob);
+            if (!success)
+            {
+                string texFormat = ((TextureFormat)texFile.m_TextureFormat).ToString();
+                await MessageBoxUtil.ShowDialog(win, "Error", $"[{errorAssetName}]: Failed to decode texture format {texFormat}");
+            }
+            return success;
         }
     }
 
