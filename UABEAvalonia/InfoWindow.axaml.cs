@@ -18,7 +18,10 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using UABEAvalonia.Plugins;
 
 namespace UABEAvalonia
@@ -1028,9 +1031,37 @@ namespace UABEAvalonia
         private async void NextNameSearch()
         {
             bool foundResult = false;
+            string resultInfo = "";
             if (searching)
             {
+
                 List<AssetInfoDataGridItem> itemList = GetDataGridItemsSorted(dgcv);
+                foreach (AssetInfoDataGridItem item in itemList)
+                {
+                    AssetContainer? assetContainer = item.assetContainer;
+                    if (assetContainer == null) continue;
+
+                    if (assetContainer != null && !assetContainer.HasValueField)
+                    {
+                        assetContainer = Workspace.GetAssetContainer(assetContainer.FileInstance, 0, assetContainer.PathId, false);
+                    }
+
+                    AssetTypeValueField? baseField = assetContainer?.BaseValueField;
+
+                    if (baseField == null) continue;
+
+                    using MemoryStream ms = new MemoryStream();
+                    using StreamWriter sw = new StreamWriter(ms);
+                    AssetImportExport dumper = new AssetImportExport();
+                    dumper.DumpTextAsset(sw, baseField);
+                    sw.Flush();
+
+                    string str = Encoding.UTF8.GetString(ms.ToArray());
+
+                    if (Regex.IsMatch(str, searchText, searchCaseSensitive ? RegexOptions.IgnoreCase : RegexOptions.None))
+                        resultInfo += "Search `" + searchText + "` is find in `" + item.Container + "[" + item.Name + "]`\n";
+                }
+
                 if (searchDown)
                 {
                     for (int i = searchStart; i < itemList.Count; i++)
@@ -1065,7 +1096,7 @@ namespace UABEAvalonia
 
             if (!foundResult)
             {
-                await MessageBoxUtil.ShowDialog(this, "Search end", "Can't find any assets that match.");
+                await MessageBoxUtil.ShowDialog(this, "Search end", "Can't find any assets that match.\n\n" + resultInfo);
 
                 searchText = "";
                 searchStart = 0;
